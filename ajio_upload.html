@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AJIO — Upload Damage Photos</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --red: #E8002D;
+    --dark: #0a0a0a;
+    --card: #141414;
+    --border: #2a2a2a;
+    --text: #f0f0f0;
+    --muted: #888;
+    --success: #00c853;
+  }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  /* Background grain */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    position: relative;
+    z-index: 1;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(20,20,20,0.95);
+    backdrop-filter: blur(10px);
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 3px;
+    color: var(--red);
+  }
+
+  .header-tag {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-left: 1px solid var(--border);
+    padding-left: 16px;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 40px 20px 60px;
+  }
+
+  .hero {
+    margin-bottom: 40px;
+  }
+
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(36px, 8vw, 56px);
+    letter-spacing: 2px;
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+
+  .hero h1 span {
+    color: var(--red);
+  }
+
+  .hero p {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.7;
+    max-width: 480px;
+  }
+
+  /* Drop Zone */
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: var(--card);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .drop-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(232,0,45,0.05) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--red);
+    background: #1a0008;
+  }
+
+  .drop-zone:hover::before, .drop-zone.drag-over::before {
+    opacity: 1;
+  }
+
+  .drop-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px;
+    background: rgba(232,0,45,0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s;
+  }
+
+  .drop-zone:hover .drop-icon {
+    transform: scale(1.1);
+  }
+
+  .drop-icon svg {
+    width: 28px;
+    height: 28px;
+    stroke: var(--red);
+    fill: none;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .drop-zone h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .drop-zone p {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+
+  .btn-upload {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--red);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-upload:hover {
+    background: #ff1a45;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(232,0,45,0.3);
+  }
+
+  .btn-upload:active {
+    transform: translateY(0);
+  }
+
+  .formats {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  .format-tag {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+
+  #fileInput { display: none; }
+
+  /* Preview Grid */
+  .preview-section {
+    display: none;
+    margin-bottom: 24px;
+  }
+
+  .preview-section.visible { display: block; }
+
+  .preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .preview-header h3 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .preview-count {
+    font-size: 12px;
+    color: var(--red);
+    font-weight: 600;
+  }
+
+  .preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+  }
+
+  .preview-item {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    aspect-ratio: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+  }
+
+  .preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .preview-item .remove-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    background: rgba(0,0,0,0.8);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    backdrop-filter: blur(4px);
+  }
+
+  .preview-item .remove-btn:hover {
+    background: var(--red);
+  }
+
+  .preview-item .upload-status {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.9));
+    padding: 20px 8px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  .status-uploading { color: #ffd700; }
+  .status-done { color: var(--success); }
+  .status-error { color: var(--red); }
+
+  /* Upload Button */
+  .upload-action {
+    display: none;
+    margin-bottom: 24px;
+  }
+
+  .upload-action.visible { display: block; }
+
+  .btn-primary {
+    width: 100%;
+    padding: 16px;
+    background: var(--red);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: #ff1a45;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(232,0,45,0.35);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Progress */
+  .progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 12px;
+    overflow: hidden;
+    display: none;
+  }
+
+  .progress-bar.visible { display: block; }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--red);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  /* Results */
+  .results-section {
+    display: none;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .results-section.visible { display: block; }
+
+  .results-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .success-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--success);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.5); }
+  }
+
+  .results-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .results-header span {
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: auto;
+  }
+
+  .result-item {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: background 0.2s;
+  }
+
+  .result-item:last-child { border-bottom: none; }
+  .result-item:hover { background: rgba(255,255,255,0.02); }
+
+  .result-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+  }
+
+  .result-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .result-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+  }
+
+  .result-url {
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: monospace;
+  }
+
+  .copy-btn {
+    flex-shrink: 0;
+    background: rgba(232,0,45,0.1);
+    border: 1px solid rgba(232,0,45,0.2);
+    color: var(--red);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .copy-btn:hover {
+    background: var(--red);
+    color: white;
+  }
+
+  .copy-btn.copied {
+    background: var(--success);
+    border-color: var(--success);
+    color: white;
+  }
+
+  /* Copy All */
+  .copy-all-section {
+    padding: 20px 24px;
+    background: rgba(232,0,45,0.03);
+    border-top: 1px solid var(--border);
+  }
+
+  .copy-all-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .copy-all-box {
+    background: var(--dark);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 12px;
+    font-family: monospace;
+    color: var(--text);
+    word-break: break-all;
+    line-height: 1.8;
+    margin-bottom: 12px;
+    max-height: 100px;
+    overflow-y: auto;
+  }
+
+  .btn-copy-all {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--red);
+    color: var(--red);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-copy-all:hover {
+    background: var(--red);
+    color: white;
+  }
+
+  .btn-copy-all.copied {
+    background: var(--success);
+    border-color: var(--success);
+    color: white;
+  }
+
+  /* Instructions */
+  .instructions {
+    margin-top: 32px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.02);
+  }
+
+  .instructions h4 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 14px;
+  }
+
+  .step {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+    align-items: flex-start;
+  }
+
+  .step-num {
+    width: 20px;
+    height: 20px;
+    background: var(--red);
+    color: white;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .step p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .step p strong { color: var(--text); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #1a1a1a;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 1000;
+    white-space: nowrap;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 480px) {
+    .preview-grid { grid-template-columns: repeat(3, 1fr); }
+    .result-item { flex-wrap: wrap; }
+    .copy-btn { width: 100%; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">AJIO</div>
+  <div class="header-tag">Damage Return Portal</div>
+</header>
+
+<div class="container">
+  <div class="hero">
+    <h1>Upload <span>Damage</span><br>Photos</h1>
+    <p>Upload clear photos of the damaged product. We accept up to 10 images in any quality. After uploading, copy the links and paste them in the chat.</p>
+  </div>
+
+  <!-- Drop Zone -->
+  <div class="drop-zone" id="dropZone">
+    <div class="drop-icon">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    </div>
+    <h3>Drop photos here</h3>
+    <p>Drag & drop your damage photos or click to browse</p>
+    <button class="btn-upload" onclick="document.getElementById('fileInput').click()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      Choose Photos
+    </button>
+    <div class="formats">
+      <span class="format-tag">JPG</span>
+      <span class="format-tag">PNG</span>
+      <span class="format-tag">WEBP</span>
+      <span class="format-tag">HEIC</span>
+      <span class="format-tag">4K</span>
+      <span class="format-tag">Max 10 images</span>
+    </div>
+  </div>
+
+  <input type="file" id="fileInput" accept="image/*" multiple>
+
+  <!-- Preview -->
+  <div class="preview-section" id="previewSection">
+    <div class="preview-header">
+      <h3>Selected Photos</h3>
+      <span class="preview-count" id="previewCount">0 photos</span>
+    </div>
+    <div class="preview-grid" id="previewGrid"></div>
+  </div>
+
+  <!-- Upload Button -->
+  <div class="upload-action" id="uploadAction">
+    <button class="btn-primary" id="uploadBtn" onclick="uploadAllImages()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Upload All Photos
+    </button>
+    <div class="progress-bar" id="progressBar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="results-section" id="resultsSection">
+    <div class="results-header">
+      <div class="success-dot"></div>
+      <h3>Photos Uploaded Successfully</h3>
+      <span id="resultCount"></span>
+    </div>
+    <div id="resultsList"></div>
+    <div class="copy-all-section">
+      <div class="copy-all-label">All Links — Paste in Voiceflow Chat</div>
+      <div class="copy-all-box" id="allLinksBox"></div>
+      <button class="btn-copy-all" id="copyAllBtn" onclick="copyAllLinks()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy All Links
+      </button>
+    </div>
+  </div>
+
+  <!-- Instructions -->
+  <div class="instructions">
+    <h4>How to use</h4>
+    <div class="step">
+      <div class="step-num">1</div>
+      <p><strong>Select photos</strong> — Click "Choose Photos" or drag & drop damage images</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <p><strong>Upload</strong> — Click "Upload All Photos" to get shareable links</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <p><strong>Copy links</strong> — Click "Copy All Links" to copy all image URLs</p>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <p><strong>Paste in chat</strong> — Go back to AJIO bot and paste the links in the message box</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  var selectedFiles = [];
+  var uploadedLinks = [];
+
+  // Drag and drop
+  var dropZone = document.getElementById('dropZone');
+
+  dropZone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+
+  dropZone.addEventListener('dragleave', function() {
+    dropZone.classList.remove('drag-over');
+  });
+
+  dropZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    var files = Array.from(e.dataTransfer.files).filter(function(f) {
+      return f.type.startsWith('image/');
+    });
+    addFiles(files);
+  });
+
+  dropZone.addEventListener('click', function(e) {
+    if (e.target.closest('.btn-upload')) return;
+    document.getElementById('fileInput').click();
+  });
+
+  document.getElementById('fileInput').addEventListener('change', function(e) {
+    addFiles(Array.from(e.target.files));
+    e.target.value = '';
+  });
+
+  function addFiles(files) {
+    files.forEach(function(file) {
+      if (selectedFiles.length >= 10) {
+        showToast('Maximum 10 photos allowed');
+        return;
+      }
+      if (!selectedFiles.find(function(f) { return f.name === file.name && f.size === file.size; })) {
+        selectedFiles.push(file);
+      }
+    });
+    renderPreviews();
+  }
+
+  function renderPreviews() {
+    var grid = document.getElementById('previewGrid');
+    var previewSection = document.getElementById('previewSection');
+    var uploadAction = document.getElementById('uploadAction');
+    var count = document.getElementById('previewCount');
+
+    grid.innerHTML = '';
+    count.textContent = selectedFiles.length + ' photo' + (selectedFiles.length !== 1 ? 's' : '');
+
+    if (selectedFiles.length > 0) {
+      previewSection.classList.add('visible');
+      uploadAction.classList.add('visible');
+    } else {
+      previewSection.classList.remove('visible');
+      uploadAction.classList.remove('visible');
+    }
+
+    selectedFiles.forEach(function(file, index) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var item = document.createElement('div');
+        item.className = 'preview-item';
+        item.innerHTML = '<img src="' + e.target.result + '" alt="Preview">' +
+          '<button class="remove-btn" onclick="removeFile(' + index + ')">×</button>' +
+          '<div class="upload-status"><span class="status-ready">Ready</span></div>';
+        grid.appendChild(item);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function removeFile(index) {
+    selectedFiles.splice(index, 1);
+    renderPreviews();
+  }
+
+  async function uploadAllImages() {
+    if (selectedFiles.length === 0) return;
+
+    var btn = document.getElementById('uploadBtn');
+    var progressBar = document.getElementById('progressBar');
+    var progressFill = document.getElementById('progressFill');
+
+    btn.disabled = true;
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg> Uploading...';
+    progressBar.classList.add('visible');
+    uploadedLinks = [];
+
+    for (var i = 0; i < selectedFiles.length; i++) {
+      var file = selectedFiles[i];
+      try {
+        var formData = new FormData();
+        formData.append('image', file);
+
+        var response = await fetch('https://api.imgbb.com/1/upload?key=425392a759709207efa7f17c74f4d979', {
+          method: 'POST',
+          body: formData
+        });
+
+        var data = await response.json();
+
+        if (data.success) {
+          uploadedLinks.push({
+            name: file.name,
+            url: data.data.url,
+            thumb: data.data.thumb ? data.data.thumb.url : data.data.url
+          });
+        } else {
+          // Fallback: use FileReader URL for demo
+          uploadedLinks.push({
+            name: file.name,
+            url: await readFileAsDataURL(file),
+            thumb: await readFileAsDataURL(file),
+            isLocal: true
+          });
+        }
+      } catch (err) {
+        // Demo mode fallback
+        var localUrl = await readFileAsDataURL(file);
+        uploadedLinks.push({
+          name: file.name,
+          url: localUrl,
+          thumb: localUrl,
+          isLocal: true
+        });
+      }
+
+      var progress = ((i + 1) / selectedFiles.length) * 100;
+      progressFill.style.width = progress + '%';
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '✓ Upload Complete';
+    showResults();
+    showToast('All photos uploaded! Copy links below.');
+  }
+
+  function readFileAsDataURL(file) {
+    return new Promise(function(resolve) {
+      var reader = new FileReader();
+      reader.onload = function(e) { resolve(e.target.result); };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function showResults() {
+    var resultsSection = document.getElementById('resultsSection');
+    var resultsList = document.getElementById('resultsList');
+    var resultCount = document.getElementById('resultCount');
+    var allLinksBox = document.getElementById('allLinksBox');
+
+    resultsSection.classList.add('visible');
+    resultCount.textContent = uploadedLinks.length + ' photos';
+    resultsList.innerHTML = '';
+
+    var allUrls = [];
+
+    uploadedLinks.forEach(function(item, index) {
+      var displayUrl = item.isLocal ? '[Local Preview - Add ImgBB API key for real links]' : item.url;
+      if (!item.isLocal) allUrls.push(item.url);
+
+      var div = document.createElement('div');
+      div.className = 'result-item';
+      div.innerHTML = '<img class="result-thumb" src="' + item.thumb + '" alt="' + item.name + '">' +
+        '<div class="result-info">' +
+          '<div class="result-name">' + item.name + '</div>' +
+          '<div class="result-url">' + displayUrl + '</div>' +
+        '</div>' +
+        '<button class="copy-btn" onclick="copyLink(this, \'' + (item.isLocal ? '' : item.url) + '\')">Copy</button>';
+      resultsList.appendChild(div);
+    });
+
+    if (allUrls.length > 0) {
+      allLinksBox.textContent = allUrls.join('\n');
+    } else {
+      allLinksBox.textContent = 'Add your ImgBB API key to get real shareable links. Get free key at imgbb.com';
+    }
+
+    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function copyLink(btn, url) {
+    if (!url) {
+      showToast('Add ImgBB API key for real links');
+      return;
+    }
+    navigator.clipboard.writeText(url).then(function() {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(function() {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 2000);
+      showToast('Link copied!');
+    });
+  }
+
+  function copyAllLinks() {
+    var allLinksBox = document.getElementById('allLinksBox');
+    var text = allLinksBox.textContent;
+    var btn = document.getElementById('copyAllBtn');
+
+    if (text.includes('Add your ImgBB')) {
+      showToast('Add ImgBB API key for real links');
+      return;
+    }
+
+    navigator.clipboard.writeText(text).then(function() {
+      btn.innerHTML = '✓ Copied All Links!';
+      btn.classList.add('copied');
+      setTimeout(function() {
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy All Links';
+        btn.classList.remove('copied');
+      }, 2000);
+      showToast('All links copied! Paste in Voiceflow chat.');
+    });
+  }
+
+  function showToast(msg) {
+    var toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(function() { toast.classList.remove('show'); }, 3000);
+  }
+</script>
+</body>
+</html>

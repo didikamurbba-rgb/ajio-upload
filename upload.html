@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AJIO — Upload Damage Photos</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --red:#E8002D;--dark:#0d0d0d;--card:#161616;--card2:#1e1e1e;
+    --border:#272727;--text:#f5f5f5;--muted:#666;--success:#00e676;
+  }
+  body{background:var(--dark);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+  header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;background:#0d0d0d;position:sticky;top:0;z-index:100}
+  .logo{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:3px;color:var(--red)}
+  .header-tag{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);border-left:1px solid var(--border);padding-left:14px}
+  .container{flex:1;max-width:540px;margin:0 auto;padding:28px 16px 60px;width:100%}
+
+  .hero{margin-bottom:28px}
+  .hero h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,10vw,56px);letter-spacing:1px;line-height:1;margin-bottom:8px}
+  .hero h1 em{color:var(--red);font-style:normal}
+  .hero p{color:var(--muted);font-size:13px;line-height:1.7}
+
+  /* API Key */
+  .api-section{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:20px}
+  .api-section label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:8px}
+  .api-row{display:flex;gap:10px}
+  .api-input{flex:1;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-family:'Syne',sans-serif;font-size:13px;outline:none;transition:border-color 0.2s}
+  .api-input:focus{border-color:var(--red)}
+  .api-input::placeholder{color:var(--muted)}
+  .btn-save-api{padding:11px 16px;background:var(--red);color:white;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all 0.2s}
+  .btn-save-api:hover{background:#ff1a45}
+  .api-status{font-size:11px;margin-top:8px;color:var(--muted)}
+  .api-status.ok{color:var(--success)}
+  .api-hint{font-size:11px;color:var(--muted);margin-top:5px}
+  .api-hint a{color:var(--red);text-decoration:none}
+
+  /* Upload Options */
+  .upload-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+  .upload-btn{background:var(--card);border:2px solid var(--border);border-radius:16px;padding:24px 16px;text-align:center;cursor:pointer;transition:all 0.25s;display:flex;flex-direction:column;align-items:center;gap:10px}
+  .upload-btn:hover{border-color:var(--red);background:#1a0008;transform:translateY(-2px)}
+  .upload-btn:active{transform:scale(0.97)}
+  .upload-btn .icon{font-size:36px}
+  .upload-btn h3{font-size:13px;font-weight:700}
+  .upload-btn p{font-size:11px;color:var(--muted);line-height:1.4}
+  #inputCamera,#inputGallery,#inputVideo,#inputAny{display:none}
+
+  /* Error */
+  .error-box{background:rgba(232,0,45,0.08);border:1px solid rgba(232,0,45,0.2);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--red);margin-bottom:14px;display:none}
+  .error-box.visible{display:block}
+
+  /* Preview */
+  .preview-section{display:none;margin-bottom:20px}
+  .preview-section.visible{display:block}
+  .preview-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .preview-header h3{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+  .preview-count{font-size:12px;color:var(--red);font-weight:700}
+  .preview-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .preview-item{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:1;background:var(--card);border:1px solid var(--border)}
+  .preview-item img{width:100%;height:100%;object-fit:cover;display:block}
+  .preview-item .video-thumb{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;background:var(--card2)}
+  .preview-item .remove-btn{position:absolute;top:5px;right:5px;width:22px;height:22px;background:rgba(0,0,0,0.85);border:none;border-radius:50%;color:white;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s}
+  .preview-item .remove-btn:hover{background:var(--red)}
+  .preview-item .file-type{position:absolute;bottom:5px;left:5px;font-size:9px;font-weight:700;background:rgba(0,0,0,0.8);color:white;padding:2px 6px;border-radius:4px;text-transform:uppercase}
+  .preview-item .file-type.video{background:var(--red)}
+
+  /* Upload button */
+  .upload-action{display:none;margin-bottom:20px}
+  .upload-action.visible{display:block}
+  .btn-upload-all{width:100%;padding:16px;background:var(--red);color:white;border:none;border-radius:14px;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s}
+  .btn-upload-all:hover:not(:disabled){background:#ff1a45;transform:translateY(-2px);box-shadow:0 12px 32px rgba(232,0,45,0.35)}
+  .btn-upload-all:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+  .progress-wrap{margin-top:12px;display:none}
+  .progress-wrap.visible{display:block}
+  .progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+  .progress-fill{height:100%;background:var(--red);border-radius:2px;transition:width 0.4s ease;width:0%}
+  .progress-text{font-size:11px;color:var(--muted);margin-top:6px;text-align:center}
+
+  /* Results */
+  .results-section{display:none;background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:20px}
+  .results-section.visible{display:block;animation:slideUp 0.4s ease}
+  @keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  .results-header{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  .live-dot{width:8px;height:8px;background:var(--success);border-radius:50%;animation:blink 1.5s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+  .results-header h3{font-size:13px;font-weight:700}
+  .results-header span{margin-left:auto;font-size:11px;color:var(--muted)}
+  .result-item{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  .result-item:last-child{border-bottom:none}
+  .result-thumb{width:40px;height:40px;border-radius:8px;overflow:hidden;flex-shrink:0;border:1px solid var(--border);background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:18px}
+  .result-thumb img{width:100%;height:100%;object-fit:cover}
+  .result-info{flex:1;min-width:0}
+  .result-name{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+  .result-url{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:monospace}
+  .copy-btn{flex-shrink:0;background:rgba(232,0,45,0.1);border:1px solid rgba(232,0,45,0.25);color:var(--red);padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:'Syne',sans-serif}
+  .copy-btn:hover{background:var(--red);color:white}
+  .copy-btn.copied{background:var(--success);border-color:var(--success);color:#000}
+
+  /* Copy all */
+  .copy-all-wrap{padding:16px 18px;border-top:1px solid var(--border);background:rgba(0,0,0,0.3)}
+  .copy-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .links-box{background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:11px;font-family:monospace;color:var(--success);word-break:break-all;line-height:2;margin-bottom:12px;max-height:110px;overflow-y:auto}
+  .bottom-btns{display:flex;flex-direction:column;gap:10px}
+  .btn-copy-all{width:100%;padding:14px;background:var(--red);color:white;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px}
+  .btn-copy-all:hover{background:#ff1a45}
+  .btn-copy-all.copied{background:var(--success);color:#000}
+  .btn-back{width:100%;padding:13px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:10px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s}
+  .btn-back:hover{border-color:var(--text);color:var(--text)}
+
+  /* Instructions */
+  .instructions{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;margin-top:20px}
+  .instructions h4{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:14px}
+  .step{display:flex;gap:10px;margin-bottom:10px}
+  .step:last-child{margin-bottom:0}
+  .step-num{width:20px;height:20px;background:var(--red);color:white;border-radius:50%;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+  .step p{font-size:12px;color:var(--muted);line-height:1.5}
+  .step p strong{color:var(--text)}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:#1e1e1e;border:1px solid var(--border);color:var(--text);padding:11px 20px;border-radius:10px;font-size:13px;font-weight:600;transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);z-index:9999;white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,0.6)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">AJIO</div>
+  <div class="header-tag">Damage Evidence Upload</div>
+</header>
+
+<div class="container">
+
+  <div class="hero">
+    <h1>Upload <em>Damage</em><br>Photos & Videos</h1>
+    <p>Upload original quality photos of the damaged product. Copy the links and paste them back in the AJIO chat.</p>
+  </div>
+
+  <!-- API Key -->
+  <div class="api-section">
+    <label>ImgBB API Key — One Time Setup</label>
+    <div class="api-row">
+      <input type="text" class="api-input" id="apiKeyInput" placeholder="Paste your free ImgBB API key" />
+      <button class="btn-save-api" onclick="saveApiKey()">Save</button>
+    </div>
+    <div class="api-status" id="apiStatus">Not saved yet</div>
+    <div class="api-hint">Get free key → <a href="https://api.imgbb.com" target="_blank">api.imgbb.com</a> → Sign up → API → Copy key</div>
+  </div>
+
+  <!-- Upload Options -->
+  <div class="upload-options">
+    <div class="upload-btn" onclick="document.getElementById('inputCamera').click()">
+      <div class="icon">📷</div>
+      <h3>Take Photo</h3>
+      <p>Click with camera directly</p>
+    </div>
+    <div class="upload-btn" onclick="document.getElementById('inputGallery').click()">
+      <div class="icon">🖼️</div>
+      <h3>From Gallery</h3>
+      <p>Choose saved photos</p>
+    </div>
+    <div class="upload-btn" onclick="document.getElementById('inputVideo').click()">
+      <div class="icon">🎥</div>
+      <h3>Record Video</h3>
+      <p>Record damage video</p>
+    </div>
+    <div class="upload-btn" onclick="document.getElementById('inputAny').click()">
+      <div class="icon">📁</div>
+      <h3>Browse Files</h3>
+      <p>Any photo or video</p>
+    </div>
+  </div>
+
+  <input type="file" id="inputCamera" accept="image/*" capture="environment" multiple onchange="addFiles(this)">
+  <input type="file" id="inputGallery" accept="image/*" multiple onchange="addFiles(this)">
+  <input type="file" id="inputVideo" accept="video/*" capture="environment" onchange="addFiles(this)">
+  <input type="file" id="inputAny" accept="image/*,video/*" multiple onchange="addFiles(this)">
+
+  <div class="error-box" id="errorBox"></div>
+
+  <!-- Preview -->
+  <div class="preview-section" id="previewSection">
+    <div class="preview-header">
+      <h3>Selected Files</h3>
+      <span class="preview-count" id="previewCount">0 files</span>
+    </div>
+    <div class="preview-grid" id="previewGrid"></div>
+  </div>
+
+  <!-- Upload Button -->
+  <div class="upload-action" id="uploadAction">
+    <button class="btn-upload-all" id="uploadBtn" onclick="uploadAll()">
+      ⬆️ Upload & Get Links
+    </button>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText"></div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="results-section" id="resultsSection">
+    <div class="results-header">
+      <div class="live-dot"></div>
+      <h3>Uploaded!</h3>
+      <span id="resultCount"></span>
+    </div>
+    <div id="resultsList"></div>
+    <div class="copy-all-wrap">
+      <div class="copy-label">All Links — Copy & Paste in AJIO Chat</div>
+      <div class="links-box" id="linksBox"></div>
+      <div class="bottom-btns">
+        <button class="btn-copy-all" id="copyAllBtn" onclick="copyAll()">📋 Copy All Links</button>
+        <button class="btn-back" onclick="goBack()">← Go Back to Chat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Instructions -->
+  <div class="instructions">
+    <h4>How to use</h4>
+    <div class="step"><div class="step-num">1</div><p><strong>Save API key once</strong> — free from api.imgbb.com — remembered forever</p></div>
+    <div class="step"><div class="step-num">2</div><p><strong>Choose photos or videos</strong> from camera or gallery — original quality</p></div>
+    <div class="step"><div class="step-num">3</div><p><strong>Click Upload</strong> — links generated instantly</p></div>
+    <div class="step"><div class="step-num">4</div><p><strong>Copy All Links</strong> then click <strong>Go Back to Chat</strong> and paste the links</p></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  var selectedFiles = [];
+  var uploadedLinks = [];
+  var imgbbApiKey = '';
+
+  // Load saved API key
+  try {
+    var saved = localStorage.getItem('imgbb_api_key');
+    if (saved) {
+      imgbbApiKey = saved;
+      document.getElementById('apiKeyInput').value = saved;
+      document.getElementById('apiStatus').textContent = '✅ API key ready — you are good to go!';
+      document.getElementById('apiStatus').className = 'api-status ok';
+    }
+  } catch(e) {}
+
+  function saveApiKey() {
+    var key = document.getElementById('apiKeyInput').value.trim();
+    if (!key) { showError('Please enter your ImgBB API key'); return; }
+    imgbbApiKey = key;
+    try { localStorage.setItem('imgbb_api_key', key); } catch(e) {}
+    document.getElementById('apiStatus').textContent = '✅ Saved! You only need to do this once.';
+    document.getElementById('apiStatus').className = 'api-status ok';
+    hideError();
+    showToast('API key saved!');
+  }
+
+  function addFiles(input) {
+    var files = Array.from(input.files);
+    files.forEach(function(file) {
+      if (selectedFiles.length >= 10) { showToast('Max 10 files allowed'); return; }
+      var dup = selectedFiles.find(function(f) { return f.name === file.name && f.size === file.size; });
+      if (!dup) selectedFiles.push(file);
+    });
+    input.value = '';
+    renderPreviews();
+  }
+
+  function renderPreviews() {
+    var grid = document.getElementById('previewGrid');
+    var section = document.getElementById('previewSection');
+    var action = document.getElementById('uploadAction');
+    document.getElementById('previewCount').textContent = selectedFiles.length + ' file' + (selectedFiles.length !== 1 ? 's' : '');
+    grid.innerHTML = '';
+
+    if (selectedFiles.length > 0) {
+      section.classList.add('visible');
+      action.classList.add('visible');
+    } else {
+      section.classList.remove('visible');
+      action.classList.remove('visible');
+    }
+
+    selectedFiles.forEach(function(file, index) {
+      var isVideo = file.type.startsWith('video/');
+      var item = document.createElement('div');
+      item.className = 'preview-item';
+
+      if (isVideo) {
+        var vt = document.createElement('div');
+        vt.className = 'video-thumb';
+        vt.textContent = '🎥';
+        item.appendChild(vt);
+      } else {
+        var reader = new FileReader();
+        (function(el) {
+          reader.onload = function(e) {
+            var img = document.createElement('img');
+            img.src = e.target.result;
+            el.insertBefore(img, el.firstChild);
+          };
+        })(item);
+        reader.readAsDataURL(file);
+      }
+
+      var rb = document.createElement('button');
+      rb.className = 'remove-btn';
+      rb.textContent = '×';
+      rb.onclick = (function(i) { return function(e) { e.stopPropagation(); removeFile(i); }; })(index);
+
+      var ft = document.createElement('div');
+      ft.className = 'file-type' + (isVideo ? ' video' : '');
+      ft.textContent = isVideo ? 'VIDEO' : 'PHOTO';
+
+      item.appendChild(rb);
+      item.appendChild(ft);
+      grid.appendChild(item);
+    });
+  }
+
+  function removeFile(index) {
+    selectedFiles.splice(index, 1);
+    renderPreviews();
+  }
+
+  async function uploadAll() {
+    if (selectedFiles.length === 0) return;
+    if (!imgbbApiKey) {
+      showError('Please save your ImgBB API key first!');
+      document.getElementById('apiKeyInput').focus();
+      return;
+    }
+    hideError();
+
+    var btn = document.getElementById('uploadBtn');
+    var progressWrap = document.getElementById('progressWrap');
+    var progressFill = document.getElementById('progressFill');
+    var progressText = document.getElementById('progressText');
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Uploading...';
+    progressWrap.classList.add('visible');
+    uploadedLinks = [];
+
+    var success = 0;
+
+    for (var i = 0; i < selectedFiles.length; i++) {
+      var file = selectedFiles[i];
+      var isVideo = file.type.startsWith('video/');
+      progressText.textContent = 'Uploading ' + (i + 1) + ' of ' + selectedFiles.length + '...';
+      progressFill.style.width = (((i + 1) / selectedFiles.length) * 100) + '%';
+
+      if (isVideo) {
+        uploadedLinks.push({ name: file.name, url: null, thumb: null, isVideo: true });
+        continue;
+      }
+
+      try {
+        var fd = new FormData();
+        fd.append('image', file);
+        var res = await fetch('https://api.imgbb.com/1/upload?key=' + imgbbApiKey, { method: 'POST', body: fd });
+        var d = await res.json();
+        if (d.success) {
+          uploadedLinks.push({ name: file.name, url: d.data.url, thumb: d.data.thumb ? d.data.thumb.url : d.data.url, isVideo: false });
+          success++;
+        } else {
+          uploadedLinks.push({ name: file.name, url: null, thumb: null, isVideo: false, error: d.error ? d.error.message : 'Failed' });
+        }
+      } catch(err) {
+        uploadedLinks.push({ name: file.name, url: null, thumb: null, isVideo: false, error: err.message });
+      }
+    }
+
+    btn.disabled = false;
+    btn.textContent = '✅ Done! ' + success + ' uploaded';
+    progressText.textContent = success + ' uploaded successfully';
+    showResults();
+    showToast(success + ' photo' + (success !== 1 ? 's' : '') + ' uploaded!');
+  }
+
+  function showResults() {
+    var section = document.getElementById('resultsSection');
+    var list = document.getElementById('resultsList');
+    var linksBox = document.getElementById('linksBox');
+
+    section.classList.add('visible');
+    document.getElementById('resultCount').textContent = uploadedLinks.filter(function(l){return l.url;}).length + ' links ready';
+    list.innerHTML = '';
+
+    var allLinks = [];
+
+    uploadedLinks.forEach(function(item) {
+      var div = document.createElement('div');
+      div.className = 'result-item';
+
+      var thumb = document.createElement('div');
+      thumb.className = 'result-thumb';
+      if (item.thumb) {
+        var img = document.createElement('img');
+        img.src = item.thumb;
+        thumb.appendChild(img);
+      } else {
+        thumb.textContent = item.isVideo ? '🎥' : (item.error ? '❌' : '📷');
+      }
+
+      var info = document.createElement('div');
+      info.className = 'result-info';
+      info.innerHTML = '<div class="result-name">' + item.name + '</div>' +
+        '<div class="result-url">' + (item.url ? item.url : (item.isVideo ? 'Video — paste directly in chat' : '❌ ' + (item.error || 'Failed'))) + '</div>';
+
+      var cb = document.createElement('button');
+      cb.className = 'copy-btn';
+      cb.textContent = item.url ? 'Copy' : '—';
+      if (!item.url) { cb.disabled = true; cb.style.opacity = '0.3'; }
+      var u = item.url;
+      cb.onclick = function() { copyLink(cb, u); };
+
+      div.appendChild(thumb);
+      div.appendChild(info);
+      div.appendChild(cb);
+      list.appendChild(div);
+
+      if (item.url) allLinks.push(item.url);
+    });
+
+    linksBox.style.color = allLinks.length > 0 ? 'var(--success)' : 'var(--red)';
+    linksBox.textContent = allLinks.length > 0 ? allLinks.join('\n') : 'No links — check API key';
+
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function copyLink(btn, url) {
+    if (!url) return;
+    navigator.clipboard.writeText(url).then(function() {
+      btn.textContent = '✓';
+      btn.classList.add('copied');
+      setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      showToast('Link copied!');
+    });
+  }
+
+  function copyAll() {
+    var text = document.getElementById('linksBox').textContent;
+    if (!text || text.includes('No links')) { showToast('No links to copy'); return; }
+    var btn = document.getElementById('copyAllBtn');
+    navigator.clipboard.writeText(text).then(function() {
+      btn.textContent = '✅ Copied!';
+      btn.classList.add('copied');
+      setTimeout(function() { btn.textContent = '📋 Copy All Links'; btn.classList.remove('copied'); }, 3000);
+      showToast('All links copied! Paste in AJIO chat.');
+    });
+  }
+
+  function goBack() {
+    var text = document.getElementById('linksBox').textContent;
+    if (text && !text.includes('No links')) {
+      navigator.clipboard.writeText(text).then(function() {
+        showToast('Links copied! Going back...');
+        setTimeout(function() { window.history.back(); }, 1200);
+      }).catch(function() { window.history.back(); });
+    } else {
+      window.history.back();
+    }
+  }
+
+  function showError(msg) {
+    var el = document.getElementById('errorBox');
+    el.textContent = '⚠️ ' + msg;
+    el.classList.add('visible');
+  }
+  function hideError() { document.getElementById('errorBox').classList.remove('visible'); }
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function() { t.classList.remove('show'); }, 3000);
+  }
+</script>
+</body>
+</html>
